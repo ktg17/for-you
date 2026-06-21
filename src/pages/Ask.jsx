@@ -32,14 +32,22 @@ export default function Ask() {
     }
     // keep a local copy so nothing is lost
     localStorage.setItem('icecream-rsvp', JSON.stringify(payload))
-    console.log('🍦 RSVP:', payload)
-    // When deployed to Vercel we'll add /api/rsvp to receive this. Fails silently for now.
+    // email the answer to me via Web3Forms
     try {
-      await fetch('/api/rsvp', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+      await fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          access_key: config.web3formsKey,
+          subject: `🍦 ${config.herName} said YES — and picked a time!`,
+          from_name: 'Ice-cream site 🍦',
+          Who: config.herName,
+          Day: sel.prettyDate,
+          Time: sel.time12,
+          'Submitted at': payload.submittedAt,
+        }),
       })
-    } catch { /* backend not wired up yet */ }
+    } catch { /* if the email service is unreachable, the localStorage copy remains */ }
     burstHearts()
     setStage('done')
     setSending(false)

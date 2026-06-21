@@ -47,6 +47,9 @@ export const config = {
   askNote: 'no pressure at all — just thought it could be fun. (my treat, btw 😌)',
   askSuccess: "yay! it's a plan 🎉 i'll see you then.",
 
+  // 📧 Where her answer is emailed (Web3Forms access key). Emails to: ktg7studio@gmail.com
+  web3formsKey: '9beae33d-a04b-4e1e-aefb-18824ca67f83',
+
   // 🎵 Background music credit (required by the music's free licence — please keep visible)
   musicCredit: 'Music: “Heartwarming” — Kevin MacLeod (incompetech.com), CC BY 3.0',
 }
