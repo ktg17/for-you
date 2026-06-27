@@ -1,25 +1,30 @@
 import { useEffect, useRef, useState } from 'react'
 
-// Floating music toggle. Browsers block autoplay-with-sound, so we start muted
-// and fade the volume in on the first user interaction (or button press).
+// Global audio ref accessible by other pages
+export const globalAudio = { ref: null, playing: false }
+
 export default function MusicPlayer() {
   const audio = useRef(null)
   const [playing, setPlaying] = useState(false)
 
   useEffect(() => {
+    globalAudio.ref = audio.current
     const a = audio.current
     a.volume = 0
     a.loop = true
 
-    // try to begin playback (muted) and fade in after the first interaction
     const tryStart = () => {
+      // Don't start if Tell page has taken over audio
+      if (globalAudio.suppressed) return
       a.play().then(() => {
         fadeTo(0.35)
         setPlaying(true)
+        globalAudio.playing = true
       }).catch(() => {})
       window.removeEventListener('pointerdown', tryStart)
     }
     window.addEventListener('pointerdown', tryStart, { once: true })
+    globalAudio.tryStart = tryStart
     return () => window.removeEventListener('pointerdown', tryStart)
   }, [])
 
@@ -39,8 +44,10 @@ export default function MusicPlayer() {
       fadeTo(0)
       setTimeout(() => a.pause(), 500)
       setPlaying(false)
+      globalAudio.playing = false
     } else {
-      a.play().then(() => { fadeTo(0.35); setPlaying(true) }).catch(() => {})
+      if (globalAudio.suppressed) return
+      a.play().then(() => { fadeTo(0.35); setPlaying(true); globalAudio.playing = true }).catch(() => {})
     }
   }
 
