@@ -4,7 +4,6 @@ import CatchHearts from '../components/CatchHearts.jsx'
 import StepDots from '../components/StepDots.jsx'
 import { config } from '../config.js'
 
-// Page 2 · cute games
 function Section({ title, subtitle, children }) {
   return (
     <section style={{ marginBottom: 52 }}>
@@ -21,11 +20,11 @@ export default function Games() {
       <h1 className="h1">{config.gamesTitle}</h1>
       <p className="lead" style={{ marginBottom: 36 }}>{config.gamesSubtitle}</p>
 
-      <Section title="🍦 catch the ice creams" subtitle="catch enough and you unlock a little note.">
+      <Section title="🍦 memory match" subtitle="flip the cards and find all the pairs! how few moves can you do it in?">
         <CatchHearts />
       </Section>
 
-      <Section title="🎈 pop the balloons" subtitle="each one has a tiny something inside.">
+      <Section title="🎈 pop the balloons" subtitle="each one has a tiny something about her inside 🤫">
         <Balloons />
       </Section>
 
