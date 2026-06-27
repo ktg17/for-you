@@ -1,35 +1,29 @@
 import { useEffect, useRef, useState } from 'react'
 
-// Global audio ref accessible by other pages
-export const globalAudio = { ref: null, playing: false }
+// Simple global so Tell page can pause/resume this
+window._bgAudio = window._bgAudio || null
 
 export default function MusicPlayer() {
-  const audio = useRef(null)
+  const audioRef = useRef(null)
   const [playing, setPlaying] = useState(false)
 
   useEffect(() => {
-    globalAudio.ref = audio.current
-    const a = audio.current
+    window._bgAudio = audioRef.current
+    const a = audioRef.current
     a.volume = 0
     a.loop = true
 
     const tryStart = () => {
-      // Don't start if Tell page has taken over audio
-      if (globalAudio.suppressed) return
-      a.play().then(() => {
-        fadeTo(0.35)
-        setPlaying(true)
-        globalAudio.playing = true
-      }).catch(() => {})
-      window.removeEventListener('pointerdown', tryStart)
+      if (window._bgSuppressed) return
+      a.play().then(() => { fadeTo(0.35); setPlaying(true) }).catch(() => {})
     }
     window.addEventListener('pointerdown', tryStart, { once: true })
-    globalAudio.tryStart = tryStart
     return () => window.removeEventListener('pointerdown', tryStart)
   }, [])
 
   const fadeTo = (target) => {
-    const a = audio.current
+    const a = audioRef.current
+    if (!a) return
     clearInterval(a._fade)
     a._fade = setInterval(() => {
       const step = target > a.volume ? 0.02 : -0.02
@@ -39,22 +33,19 @@ export default function MusicPlayer() {
   }
 
   const toggle = () => {
-    const a = audio.current
+    const a = audioRef.current
+    if (!a || window._bgSuppressed) return
     if (playing) {
-      fadeTo(0)
-      setTimeout(() => a.pause(), 500)
-      setPlaying(false)
-      globalAudio.playing = false
+      fadeTo(0); setTimeout(() => a.pause(), 500); setPlaying(false)
     } else {
-      if (globalAudio.suppressed) return
-      a.play().then(() => { fadeTo(0.35); setPlaying(true); globalAudio.playing = true }).catch(() => {})
+      a.play().then(() => { fadeTo(0.35); setPlaying(true) }).catch(() => {})
     }
   }
 
   return (
     <>
-      <audio ref={audio} src="/music.mp3" preload="auto" />
-      <button onClick={toggle} aria-label="toggle music" title={playing ? 'Pause music' : 'Play music'}
+      <audio ref={audioRef} src="/music.mp3" preload="auto" />
+      <button onClick={toggle} aria-label="toggle music"
         style={{
           position: 'fixed', bottom: 22, right: 22, zIndex: 60,
           width: 52, height: 52, borderRadius: '50%', border: '1px solid var(--border)',
