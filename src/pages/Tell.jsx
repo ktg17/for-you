@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import Typewriter from '../components/Typewriter.jsx'
 import StepDots from '../components/StepDots.jsx'
 import { config } from '../config.js'
-import { globalAudio } from '../components/MusicPlayer.jsx'
 
 export default function Tell() {
   const [started, setStarted] = useState(false)
@@ -11,60 +10,48 @@ export default function Tell() {
   const audioRef = useRef(null)
 
   useEffect(() => {
-    // Mute & pause the global background music while on this page
-    globalAudio.suppressed = true
-    const bg = globalAudio.ref
-    if (bg) {
-      bg.volume = 0
+    // Suppress & pause global bg music
+    window._bgSuppressed = true
+    const bg = window._bgAudio
+    if (bg && !bg.paused) {
       bg.pause()
     }
-
     return () => {
-      // Leaving page — stop lover, restore bg music
-      globalAudio.suppressed = false
-      if (audioRef.current) {
-        audioRef.current.pause()
-      }
-      if (bg && globalAudio.playing) {
-        bg.volume = 0.35
-        bg.play().catch(() => {})
+      // Restore bg music when leaving
+      window._bgSuppressed = false
+      if (audioRef.current) audioRef.current.pause()
+      const bg2 = window._bgAudio
+      if (bg2 && bg2.paused) {
+        bg2.volume = 0.35
+        bg2.play().catch(() => {})
       }
     }
   }, [])
 
-  // Called directly by the button — inside user gesture context
   const handleStart = () => {
     setStarted(true)
-    // Small timeout so React re-renders the <audio> tag first
-    setTimeout(() => {
-      const a = audioRef.current
-      if (a) {
-        a.volume = 0.38
-        a.loop = true
-        a.play().then(() => {
-          setPaused(false)
-        }).catch(err => {
-          console.error('lover.mp3 play error:', err)
-        })
-      }
-    }, 50)
+    // Play directly in click handler - guaranteed user gesture
+    const a = audioRef.current
+    if (a) {
+      a.currentTime = 0
+      a.volume = 0.38
+      a.play().then(() => setPaused(false)).catch(e => console.warn(e))
+    }
   }
 
   const toggleMusic = () => {
     const a = audioRef.current
     if (!a) return
-    if (a.paused) {
-      a.play().catch(() => {})
-      setPaused(false)
-    } else {
-      a.pause()
-      setPaused(true)
-    }
+    if (a.paused) { a.play().catch(() => {}); setPaused(false) }
+    else { a.pause(); setPaused(true) }
   }
 
   return (
     <div className="page" style={{ textAlign: 'center', display: 'flex',
       flexDirection: 'column', alignItems: 'center', minHeight: '70vh', justifyContent: 'center' }}>
+
+      {/* Audio always in DOM so ref is available before click */}
+      <audio ref={audioRef} src="/lover.mp3" loop preload="auto" style={{ display: 'none' }} />
 
       <h1 className="h1">{config.tellTitle}</h1>
 
@@ -80,15 +67,6 @@ export default function Tell() {
         </div>
       ) : (
         <>
-          {/* Real <audio> element rendered in DOM — most reliable for autoplay after gesture */}
-          <audio
-            ref={audioRef}
-            src="/lover.mp3"
-            loop
-            preload="auto"
-            style={{ display: 'none' }}
-          />
-
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
             <span style={{ fontSize: 18 }}>{paused ? '🔇' : '🎵'}</span>
             <button onClick={toggleMusic}
