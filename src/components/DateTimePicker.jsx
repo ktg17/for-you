@@ -3,22 +3,19 @@ import { useEffect, useState } from 'react'
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 1)
 const MINUTES = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55']
 
-function isWeekend(dateStr) {
-  if (!dateStr) return false
-  const d = new Date(dateStr + 'T00:00:00')
-  return d.getDay() === 0 || d.getDay() === 6
-}
-
-// Returns the next Saturday date string from today
-function nextWeekendDates() {
+function getWeekendDates() {
   const dates = []
+  // Start from today
   const d = new Date()
   d.setHours(0, 0, 0, 0)
-  // collect next 30 days worth of weekends
-  for (let i = 0; i < 90; i++) {
+  for (let i = 0; i < 120; i++) {
     const day = d.getDay()
+    // 0 = Sunday, 6 = Saturday ONLY
     if (day === 0 || day === 6) {
-      dates.push(d.toISOString().slice(0, 10))
+      const yyyy = d.getFullYear()
+      const mm = String(d.getMonth() + 1).padStart(2, '0')
+      const dd = String(d.getDate()).padStart(2, '0')
+      dates.push(`${yyyy}-${mm}-${dd}`)
     }
     d.setDate(d.getDate() + 1)
   }
@@ -31,7 +28,7 @@ export default function DateTimePicker({ onChange }) {
   const [minute, setMinute] = useState('00')
   const [ampm, setAmpm] = useState('PM')
 
-  const weekendDates = nextWeekendDates()
+  const weekendDates = getWeekendDates()
 
   useEffect(() => {
     const time12 = `${hour}:${minute} ${ampm}`
@@ -42,36 +39,37 @@ export default function DateTimePicker({ onChange }) {
         weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
       })
     }
-    onChange && onChange({ date, time12, prettyDate, ready: !!date && isWeekend(date) })
-  }, [date, hour, minute, ampm, onChange])
+    const isValid = !!date && weekendDates.includes(date)
+    onChange && onChange({ date, time12, prettyDate, ready: isValid })
+  }, [date, hour, minute, ampm])
 
   const fieldStyle = {
     fontFamily: 'inherit', fontSize: 16, padding: '12px 14px', borderRadius: 14,
     border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--text)',
     outline: 'none',
   }
-  const label = { display: 'block', fontSize: 13, color: 'var(--muted)', marginBottom: 6, letterSpacing: .3 }
+  const labelStyle = { display: 'block', fontSize: 13, color: 'var(--muted)', marginBottom: 6, letterSpacing: 0.3 }
 
   return (
     <div style={{ display: 'grid', gap: 18, maxWidth: 420, margin: '0 auto', textAlign: 'left' }}>
       <div>
-        <span style={label}>📅 pick a saturday or sunday</span>
+        <span style={labelStyle}>📅 pick a saturday or sunday</span>
         <select value={date} onChange={e => setDate(e.target.value)}
           style={{ ...fieldStyle, width: '100%' }}>
           <option value="">— choose a weekend day —</option>
           {weekendDates.map(d => {
             const obj = new Date(d + 'T00:00:00')
-            const label = obj.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-            return <option key={d} value={d}>{label}</option>
+            const dayName = obj.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+            return <option key={d} value={d}>{dayName}</option>
           })}
         </select>
         <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 6, marginBottom: 0 }}>
-          only saturdays & sundays available 🗓️
+          saturdays & sundays only 🗓️
         </p>
       </div>
 
       <div>
-        <span style={label}>⏰ what time?</span>
+        <span style={labelStyle}>⏰ what time?</span>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <select value={hour} onChange={e => setHour(+e.target.value)} style={fieldStyle}>
             {HOURS.map(h => <option key={h} value={h}>{h}</option>)}
