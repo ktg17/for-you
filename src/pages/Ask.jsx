@@ -7,16 +7,15 @@ import { config } from '../config.js'
 
 const NUDGES = ['you sure? 🥺', 'pretty please 🍦', 'ice cream though…', 'one chance? 👉👈', 'okay last try 🙈']
 
-// Page 4 · the ask
 export default function Ask() {
-  const [stage, setStage] = useState('asking') // asking | picking | done
+  const [stage, setStage] = useState('asking')
   const [sel, setSel] = useState({ ready: false })
   const [noIdx, setNoIdx] = useState(-1)
   const [noPos, setNoPos] = useState({ x: 0, y: 0 })
   const [sending, setSending] = useState(false)
 
   const dodge = () => {
-    setNoIdx((i) => Math.min(i + 1, NUDGES.length - 1))
+    setNoIdx(i => Math.min(i + 1, NUDGES.length - 1))
     setNoPos({ x: (Math.random() - 0.5) * 240, y: (Math.random() - 0.5) * 120 })
   }
 
@@ -30,9 +29,7 @@ export default function Ask() {
       time: sel.time12,
       submittedAt: new Date().toISOString(),
     }
-    // keep a local copy so nothing is lost
     localStorage.setItem('icecream-rsvp', JSON.stringify(payload))
-    // email the answer to me via Web3Forms
     try {
       await fetch('https://api.web3forms.com/submit', {
         method: 'POST',
@@ -47,7 +44,7 @@ export default function Ask() {
           'Submitted at': payload.submittedAt,
         }),
       })
-    } catch { /* if the email service is unreachable, the localStorage copy remains */ }
+    } catch {}
     burstHearts()
     setStage('done')
     setSending(false)
@@ -60,14 +57,21 @@ export default function Ask() {
       {stage === 'asking' && (
         <>
           <div style={{ fontSize: 64, animation: 'bob 4s ease-in-out infinite' }}>🍦</div>
-          <h1 className="h1" style={{ maxWidth: 620 }}>{config.askQuestion}</h1>
-          <p className="lead" style={{ margin: '6px auto 30px' }}>{config.askNote}</p>
+          <h1 className="h1" style={{ maxWidth: 620 }}>
+            so… will you go on a date with me? 🌟
+          </h1>
+          <p className="lead" style={{ margin: '6px auto 10px' }}>
+            just you and me — ice cream, good vibes, and a really good time. 🍦
+          </p>
+          <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 28 }}>
+            {config.askNote}
+          </p>
 
           <div style={{ display: 'flex', gap: 16, alignItems: 'center', justifyContent: 'center',
             flexWrap: 'wrap', minHeight: 120 }}>
             <button className="btn" style={{ fontSize: 18, padding: '16px 36px' }}
               onClick={() => { burstHearts(); setStage('picking') }}>
-              {config.askYes}
+              yes! I'd love that 🥰
             </button>
             <button className="btn"
               onMouseEnter={dodge} onClick={dodge}
@@ -76,7 +80,7 @@ export default function Ask() {
                 boxShadow: 'none', transform: `translate(${noPos.x}px, ${noPos.y}px)`,
                 transition: 'transform .2s ease',
               }}>
-              {noIdx < 0 ? config.askNo : NUDGES[noIdx]}
+              {noIdx < 0 ? 'maybe not… 🥲' : NUDGES[noIdx]}
             </button>
           </div>
         </>
@@ -86,7 +90,9 @@ export default function Ask() {
         <>
           <div style={{ fontSize: 56 }}>🎉</div>
           <h1 className="h1">yay! pick a day & time 🍦</h1>
-          <p className="lead" style={{ margin: '4px auto 26px' }}>whatever works best for you.</p>
+          <p className="lead" style={{ margin: '4px auto 26px' }}>
+            whatever day works best for you 💖
+          </p>
 
           <div className="card" style={{ width: 'min(92vw, 480px)' }}>
             <DateTimePicker onChange={setSel} />
@@ -98,7 +104,7 @@ export default function Ask() {
             </button>
             {!sel.ready && (
               <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 12, marginBottom: 0 }}>
-                pick a day to continue 📅
+                pick a saturday or sunday to continue 📅
               </p>
             )}
           </div>
@@ -113,7 +119,7 @@ export default function Ask() {
             <div>📅 {sel.prettyDate}</div>
             <div style={{ marginTop: 6 }}>⏰ {sel.time12}</div>
           </div>
-          <p className="lead" style={{ marginTop: 22 }}>can’t wait 🙂 — {config.yourName}</p>
+          <p className="lead" style={{ marginTop: 22 }}>can't wait 🙂 — {config.yourName}</p>
         </>
       )}
 
