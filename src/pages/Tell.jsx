@@ -1,48 +1,58 @@
 import { useState, useRef, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import Typewriter from '../components/Typewriter.jsx'
 import StepDots from '../components/StepDots.jsx'
 import { config } from '../config.js'
+import { globalAudio } from '../components/MusicPlayer.jsx'
 
 export default function Tell() {
   const [started, setStarted] = useState(false)
   const [paused, setPaused] = useState(false)
-  const audioRef = useRef(null)
+  const loverRef = useRef(null)
 
-  // Create the Audio object once — but only in the browser
   useEffect(() => {
-    const audio = new Audio('/lover.mp3')
-    audio.loop = true
-    audio.volume = 0.35
-    audioRef.current = audio
+    // Create lover.mp3 audio
+    const lover = new Audio('/lover.mp3')
+    lover.loop = true
+    lover.volume = 0.38
+    loverRef.current = lover
+
+    // Suppress the global music.mp3 player
+    globalAudio.suppressed = true
+    const bgAudio = globalAudio.ref
+    if (bgAudio && !bgAudio.paused) {
+      bgAudio.pause()
+    }
+
+    // On unmount: stop lover, restore global music
     return () => {
-      audio.pause()
-      audio.src = ''
+      lover.pause()
+      lover.src = ''
+      globalAudio.suppressed = false
+      // Resume background music if it was playing before
+      if (bgAudio && globalAudio.playing) {
+        bgAudio.play().catch(() => {})
+      }
     }
   }, [])
 
   const handleStart = () => {
     setStarted(true)
-    // Play inside the click handler — guaranteed user gesture context
-    const audio = audioRef.current
-    if (audio) {
-      audio.currentTime = 0
-      audio.play().then(() => {
-        setPaused(false)
-      }).catch(err => {
-        console.warn('audio play failed:', err)
-      })
+    const lover = loverRef.current
+    if (lover) {
+      lover.currentTime = 0
+      lover.play().then(() => setPaused(false)).catch(err => console.warn('lover play failed:', err))
     }
   }
 
   const toggleMusic = () => {
-    const audio = audioRef.current
-    if (!audio) return
-    if (audio.paused) {
-      audio.play().catch(() => {})
+    const lover = loverRef.current
+    if (!lover) return
+    if (lover.paused) {
+      lover.play().catch(() => {})
       setPaused(false)
     } else {
-      audio.pause()
+      lover.pause()
       setPaused(true)
     }
   }
