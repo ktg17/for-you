@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import Typewriter from '../components/Typewriter.jsx'
 import StepDots from '../components/StepDots.jsx'
@@ -6,32 +6,50 @@ import { config } from '../config.js'
 
 export default function Tell() {
   const [started, setStarted] = useState(false)
+  const [paused, setPaused] = useState(false)
   const audioRef = useRef(null)
+
+  // Create the Audio object once — but only in the browser
+  useEffect(() => {
+    const audio = new Audio('/lover.mp3')
+    audio.loop = true
+    audio.volume = 0.35
+    audioRef.current = audio
+    return () => {
+      audio.pause()
+      audio.src = ''
+    }
+  }, [])
 
   const handleStart = () => {
     setStarted(true)
-    // Play the music file from /public/lover.mp3
-    if (audioRef.current) {
-      audioRef.current.volume = 0.35
-      audioRef.current.play().catch(() => {})
+    // Play inside the click handler — guaranteed user gesture context
+    const audio = audioRef.current
+    if (audio) {
+      audio.currentTime = 0
+      audio.play().then(() => {
+        setPaused(false)
+      }).catch(err => {
+        console.warn('audio play failed:', err)
+      })
     }
   }
 
   const toggleMusic = () => {
-    if (!audioRef.current) return
-    if (audioRef.current.paused) {
-      audioRef.current.play().catch(() => {})
+    const audio = audioRef.current
+    if (!audio) return
+    if (audio.paused) {
+      audio.play().catch(() => {})
+      setPaused(false)
     } else {
-      audioRef.current.pause()
+      audio.pause()
+      setPaused(true)
     }
   }
 
   return (
     <div className="page" style={{ textAlign: 'center', display: 'flex',
       flexDirection: 'column', alignItems: 'center', minHeight: '70vh', justifyContent: 'center' }}>
-
-      {/* Hidden audio element — src points to public/lover.mp3 in your repo */}
-      <audio ref={audioRef} src="/lover.mp3" loop preload="auto" />
 
       <h1 className="h1">{config.tellTitle}</h1>
 
@@ -48,13 +66,13 @@ export default function Tell() {
       ) : (
         <>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-            <span style={{ fontSize: 18 }}>🎵</span>
+            <span style={{ fontSize: 18 }}>{paused ? '🔇' : '🎵'}</span>
             <button onClick={toggleMusic}
               style={{
                 background: 'none', border: '1px solid var(--border)', borderRadius: 20,
                 padding: '4px 14px', cursor: 'pointer', color: 'var(--muted)', fontSize: 12
               }}>
-              pause / play
+              {paused ? '▶ play' : '⏸ pause'}
             </button>
           </div>
 
