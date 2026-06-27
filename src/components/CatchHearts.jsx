@@ -1,92 +1,106 @@
-import { useEffect, useRef, useState } from 'react'
-import { config } from '../config.js'
+import { useState, useEffect, useCallback } from 'react'
 import { burstHearts } from './FloatingHearts.jsx'
+import { config } from '../config.js'
 
-const EMOJI = ['🍦', '🍨', '🍧', '🍦', '🍨']
-let hid = 0
+const EMOJIS = ['🍦','🍨','🍧','🍰','🧁','🍩','🍪','🎂']
 
-// Ice creams fall; catch them by clicking/tapping. Reach the goal to unlock a message.
-export default function CatchHearts() {
-  const goal = config.catchGoal
-  const [running, setRunning] = useState(false)
-  const [score, setScore] = useState(0)
-  const [hearts, setHearts] = useState([])
-  const [won, setWon] = useState(false)
-  const spawnRef = useRef(null)
-
-  const start = () => {
-    setScore(0); setWon(false); setHearts([]); setRunning(true)
+function shuffle(arr) {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]]
   }
+  return a
+}
+
+function makeCards() {
+  const chosen = shuffle(EMOJIS).slice(0, 6)
+  return shuffle([...chosen, ...chosen].map((e, i) => ({ id: i, emoji: e, flipped: false, matched: false })))
+}
+
+// Memory match game: flip cards and find pairs!
+export default function CatchHearts() {
+  const [cards, setCards] = useState(makeCards)
+  const [selected, setSelected] = useState([])
+  const [moves, setMoves] = useState(0)
+  const [won, setWon] = useState(false)
+  const [locked, setLocked] = useState(false)
+
+  const reset = () => { setCards(makeCards()); setSelected([]); setMoves(0); setWon(false); setLocked(false) }
+
+  const flip = useCallback((id) => {
+    if (locked) return
+    setCards(prev => {
+      const card = prev.find(c => c.id === id)
+      if (!card || card.flipped || card.matched) return prev
+      return prev.map(c => c.id === id ? { ...c, flipped: true } : c)
+    })
+    setSelected(prev => [...prev, id])
+  }, [locked, cards])
 
   useEffect(() => {
-    if (!running) return
-    spawnRef.current = setInterval(() => {
-      const id = hid++
-      const h = {
-        id, left: 6 + Math.random() * 84,
-        emoji: EMOJI[Math.floor(Math.random() * EMOJI.length)],
-        dur: 2.6 + Math.random() * 1.6,
-        size: 26 + Math.random() * 14,
-      }
-      setHearts((hs) => [...hs, h])
-      setTimeout(() => setHearts((hs) => hs.filter((p) => p.id !== id)), h.dur * 1000)
-    }, 650)
-    return () => clearInterval(spawnRef.current)
-  }, [running])
-
-  const catchOne = (id, e) => {
-    e.stopPropagation()
-    setHearts((hs) => hs.filter((p) => p.id !== id))
-    setScore((s) => {
-      const ns = s + 1
-      if (ns >= goal) {
-        setRunning(false); setWon(true)
-        clearInterval(spawnRef.current)
-        burstHearts()
-      }
-      return ns
-    })
-  }
+    if (selected.length !== 2) return
+    setLocked(true)
+    setMoves(m => m + 1)
+    const [a, b] = selected
+    const ca = cards.find(c => c.id === a)
+    const cb = cards.find(c => c.id === b)
+    if (ca && cb && ca.emoji === cb.emoji) {
+      setCards(prev => prev.map(c => (c.id === a || c.id === b) ? { ...c, matched: true } : c))
+      setSelected([])
+      setLocked(false)
+      setTimeout(() => {
+        setCards(prev => {
+          const allDone = prev.every(c => c.matched)
+          if (allDone) { burstHearts(); setWon(true) }
+          return prev
+        })
+      }, 300)
+    } else {
+      setTimeout(() => {
+        setCards(prev => prev.map(c => (c.id === a || c.id === b) ? { ...c, flipped: false } : c))
+        setSelected([])
+        setLocked(false)
+      }, 900)
+    }
+  }, [selected])
 
   return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center',
-        gap: 16, marginBottom: 12 }}>
-        <span style={{ fontWeight: 600 }}>Caught: <span className="accent">{score}</span> / {goal}</span>
-        {!running && (
-          <button className="btn" onClick={start} style={{ padding: '10px 22px' }}>
-            {won ? 'Play again 🔁' : score === 0 ? 'Start 🎯' : 'Restart'}
-          </button>
-        )}
+    <div style={{ textAlign: 'center' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 14 }}>
+        <span style={{ fontWeight: 600, color: 'var(--muted)', fontSize: 14 }}>moves: <span className="accent">{moves}</span></span>
+        <button className="btn" onClick={reset} style={{ padding: '8px 20px', fontSize: 14 }}>
+          {won ? 'Play again 🔁' : 'Restart'}
+        </button>
       </div>
 
       <div style={{
-        position: 'relative', height: 360, borderRadius: 20, overflow: 'hidden',
-        border: '1px solid var(--border)', background: 'var(--card)', backdropFilter: 'blur(8px)',
+        display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
+        gap: 10, maxWidth: 360, margin: '0 auto',
       }}>
-        <style>{`@keyframes fall { from { top: -50px; } to { top: 110%; } }`}</style>
-        {hearts.map((h) => (
-          <button key={h.id} onClick={(e) => catchOne(h.id, e)} aria-label="catch ice cream"
+        {cards.map(card => (
+          <button key={card.id} onClick={() => flip(card.id)}
             style={{
-              position: 'absolute', left: h.left + '%', top: -50, fontSize: h.size,
-              background: 'none', border: 'none', cursor: 'pointer', padding: 4,
-              animation: `fall ${h.dur}s linear forwards`,
-            }}>{h.emoji}</button>
+              height: 72, borderRadius: 14, border: '2px solid var(--border)',
+              fontSize: 30, cursor: card.matched ? 'default' : 'pointer',
+              background: card.flipped || card.matched
+                ? 'linear-gradient(135deg,var(--accent),var(--accent2,#b98bff))'
+                : 'var(--card)',
+              boxShadow: card.flipped || card.matched ? '0 4px 12px rgba(0,0,0,.15)' : 'none',
+              transition: 'all .25s ease',
+              transform: card.flipped || card.matched ? 'scale(1.05)' : 'scale(1)',
+              opacity: card.matched ? 0.6 : 1,
+            }}>
+            {card.flipped || card.matched ? card.emoji : '❓'}
+          </button>
         ))}
-
-        {!running && won && (
-          <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center',
-            padding: 24, textAlign: 'center' }}>
-            <p className="script accent" style={{ fontSize: 26, margin: 0 }}>{config.catchReward}</p>
-          </div>
-        )}
-        {!running && !won && score === 0 && (
-          <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center',
-            color: 'var(--muted)' }}>
-            Tap “Start”, then catch the falling ice creams 🍦
-          </div>
-        )}
       </div>
+
+      {won && (
+        <p className="script accent" style={{ fontSize: 24, marginTop: 20, animation: 'fadeUp .5s ease both' }}>
+          {config.catchReward} 🎉
+        </p>
+      )}
     </div>
   )
 }
